@@ -74,61 +74,61 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','H'},
                              {'A','I'},
                              {'A','J'},
-                             {'A','A'}, //TODO: eloise continue here plzzz
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},
-                             {'A','A'},                            
-                             {'A','A'} };
+                             {'A','K'},
+                             {'A','L'},
+                             {'A','M'},
+                             {'A','N'},
+                             {'A','O'},
+                             {'A','P'},
+                             {'A','Q'},
+                             {'A','R'},
+                             {'A','S'},
+                             {'A','T'},
+                             {'A','U'},
+                             {'A','V'},
+                             {'A','W'},
+                             {'A','X'},
+                             {'A','Y'},
+                             {'A','Z'},
+                             {'B','A'},
+                             {'B','B'},
+                             {'B','C'},
+                             {'B','D'},
+                             {'B','E'},
+                             {'B','F'},
+                             {'B','G'},
+                             {'B','H'},
+                             {'B','I'},
+                             {'B','J'},
+                             {'B','K'},
+                             {'B','L'},
+                             {'B','M'},
+                             {'B','N'},
+                             {'B','O'},
+                             {'B','P'},
+                             {'B','Q'},
+                             {'B','R'},
+                             {'B','S'},
+                             {'B','T'},
+                             {'B','U'},
+                             {'B','V'},
+                             {'B','W'},
+                             {'B','X'},
+                             {'B','Y'},
+                             {'B','Z'},
+                             {'C','A'},
+                             {'C','B'},
+                             {'C','C'},
+                             {'C','D'},
+                             {'C','E'},
+                             {'C','F'},
+                             {'C','G'},
+                             {'C','H'},
+                             {'C','I'},
+                             {'C','J'},
+                             {'C','K'},
+                             {'C','L'},                            
+                             {'C','M'} };
 
 /* ========== FOREWARD DECLARATIONS ========== */
 
@@ -321,14 +321,7 @@ void build_bc_data_word(char message_byte1, char message_byte2)
     //TODO send word to socket
 }
 
-/* The following functions are used to create the status/data words sent
-   by the RTs based on the command words received */
 
-/*void send_word_to_bc(command_word_s * command)
-{
-
-}
-*/
 void build_rt_data_word(int subaddress, int data_word_count)
 {
     data_word_s data_word;
@@ -454,16 +447,5 @@ void analyze_status_word(status_word_s * status_word)
 /* ============ MAIN =========== */ 
 int main()
 {
-    send_data_to_rt(01, 10, "Some Message");
-    /*
-    generic_word_s generic_word;
-    generic_word.sync_bits = 4;
-    generic_word.reserved0 = 1;
-    generic_word.reserved1 = 128;
-    generic_word.reserved2 = 15;
-    print_void((void *)&generic_word);
-    print_word((command_word_s *)&generic_word);
-    interpret_incoming_frame_rt(&generic_word);
-    */
     return 0;
 }
