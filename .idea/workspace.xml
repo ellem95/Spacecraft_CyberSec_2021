@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="74ad7f8a-34ec-4d1f-909d-c8a1dd2cd120" name="Default Changelist" comment="" />
+    <list default="true" id="74ad7f8a-34ec-4d1f-909d-c8a1dd2cd120" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -14,7 +35,11 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectId" id="1k4bqkdqttzxzI5azHHlnhamzII" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -22,6 +47,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
@@ -73,6 +99,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="Flight_software" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="spacecraft_cyberSec-test" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Flight_software.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="RT_Simulator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="spacecraft_cyberSec-test" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -115,39 +162,30 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="binary_converter" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="spacecraft_cyberSec-master" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/MIL_STD_1553_Simulation/Bus_Controller/Physical_Layer_Emulation" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/MIL_STD_1553_Simulation/binary_converter.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.Simulator" />
         <item itemvalue="Python.RT_Simulator" />
         <item itemvalue="Python.BC_Simulator" />
+        <item itemvalue="Python.Flight_software" />
         <item itemvalue="Python.Communication_Socket_RT" />
-        <item itemvalue="Python.binary_converter" />
       </list>
     </recent_temporary>
   </component>
   <component name="SvnConfiguration">
     <configuration />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
     <state x="623" y="158" key="#BC_Simulator" timestamp="1605566817517">
@@ -162,8 +200,8 @@
       <screen x="0" y="23" width="1792" height="1045" />
     </state>
     <state x="623" y="158" key="#Simulator/0.23.1792.1045@0.23.1792.1045" timestamp="1605566838872" />
-    <state width="1658" height="294" key="GridCell.Tab.0.bottom" timestamp="1605637151172">
-      <screen x="0" y="23" width="1792" height="1045" />
+    <state width="1658" height="291" key="GridCell.Tab.0.bottom" timestamp="1611720868298">
+      <screen x="0" y="23" width="1792" height="1057" />
     </state>
     <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1043@0.23.1792.1043" timestamp="1604992901399" />
     <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1044@0.23.1792.1044" timestamp="1605565979487" />
@@ -173,8 +211,11 @@
     <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1048@0.23.1792.1048" timestamp="1605544629861" />
     <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1049@0.23.1792.1049" timestamp="1605539481668" />
     <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1050@0.23.1792.1050" timestamp="1605110132758" />
-    <state width="1658" height="294" key="GridCell.Tab.0.center" timestamp="1605637151171">
-      <screen x="0" y="23" width="1792" height="1045" />
+    <state width="1658" height="294" key="GridCell.Tab.0.bottom/0.23.1792.1051@0.23.1792.1051" timestamp="1606156301358" />
+    <state width="1658" height="291" key="GridCell.Tab.0.bottom/0.23.1792.1052@0.23.1792.1052" timestamp="1611118731427" />
+    <state width="1658" height="291" key="GridCell.Tab.0.bottom/0.23.1792.1057@0.23.1792.1057" timestamp="1611720868298" />
+    <state width="1658" height="291" key="GridCell.Tab.0.center" timestamp="1611720868297">
+      <screen x="0" y="23" width="1792" height="1057" />
     </state>
     <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1043@0.23.1792.1043" timestamp="1604992901398" />
     <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1044@0.23.1792.1044" timestamp="1605565979486" />
@@ -184,8 +225,11 @@
     <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1048@0.23.1792.1048" timestamp="1605544629860" />
     <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1049@0.23.1792.1049" timestamp="1605539481667" />
     <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1050@0.23.1792.1050" timestamp="1605110132758" />
-    <state width="1658" height="294" key="GridCell.Tab.0.left" timestamp="1605637151171">
-      <screen x="0" y="23" width="1792" height="1045" />
+    <state width="1658" height="294" key="GridCell.Tab.0.center/0.23.1792.1051@0.23.1792.1051" timestamp="1606156301357" />
+    <state width="1658" height="291" key="GridCell.Tab.0.center/0.23.1792.1052@0.23.1792.1052" timestamp="1611118731426" />
+    <state width="1658" height="291" key="GridCell.Tab.0.center/0.23.1792.1057@0.23.1792.1057" timestamp="1611720868297" />
+    <state width="1658" height="291" key="GridCell.Tab.0.left" timestamp="1611720868297">
+      <screen x="0" y="23" width="1792" height="1057" />
     </state>
     <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1043@0.23.1792.1043" timestamp="1604992901398" />
     <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1044@0.23.1792.1044" timestamp="1605565979485" />
@@ -195,8 +239,11 @@
     <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1048@0.23.1792.1048" timestamp="1605544629860" />
     <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1049@0.23.1792.1049" timestamp="1605539481666" />
     <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1050@0.23.1792.1050" timestamp="1605110132757" />
-    <state width="1658" height="294" key="GridCell.Tab.0.right" timestamp="1605637151172">
-      <screen x="0" y="23" width="1792" height="1045" />
+    <state width="1658" height="294" key="GridCell.Tab.0.left/0.23.1792.1051@0.23.1792.1051" timestamp="1606156301357" />
+    <state width="1658" height="291" key="GridCell.Tab.0.left/0.23.1792.1052@0.23.1792.1052" timestamp="1611118731425" />
+    <state width="1658" height="291" key="GridCell.Tab.0.left/0.23.1792.1057@0.23.1792.1057" timestamp="1611720868297" />
+    <state width="1658" height="291" key="GridCell.Tab.0.right" timestamp="1611720868298">
+      <screen x="0" y="23" width="1792" height="1057" />
     </state>
     <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1043@0.23.1792.1043" timestamp="1604992901399" />
     <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1044@0.23.1792.1044" timestamp="1605565979486" />
@@ -206,6 +253,9 @@
     <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1048@0.23.1792.1048" timestamp="1605544629861" />
     <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1049@0.23.1792.1049" timestamp="1605539481667" />
     <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1050@0.23.1792.1050" timestamp="1605110132758" />
+    <state width="1658" height="294" key="GridCell.Tab.0.right/0.23.1792.1051@0.23.1792.1051" timestamp="1606156301358" />
+    <state width="1658" height="291" key="GridCell.Tab.0.right/0.23.1792.1052@0.23.1792.1052" timestamp="1611118731426" />
+    <state width="1658" height="291" key="GridCell.Tab.0.right/0.23.1792.1057@0.23.1792.1057" timestamp="1611720868298" />
     <state x="384" y="186" key="SettingsEditor" timestamp="1605566801292">
       <screen x="0" y="23" width="1792" height="1045" />
     </state>
