@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h> 
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+#include <unistd.h>
+#include <arpa/inet.h>
 
 
 /* sync bits for data word = 001b */
@@ -21,49 +26,134 @@
    unknown variety until it can be assigned the appropriate structure
    by looking at sync bits */
 
-typedef struct //__attribute__((__packed__))
+#ifndef BYTE_ORDER
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+
+typedef struct __attribute__((__packed__))
 {
+    #if BYTE_ORDER == BIG_ENDIAN
     unsigned int sync_bits:3;
     unsigned int rt_address:5;
+
     unsigned int tr_bit:1;
     unsigned int subaddress:5;
-    unsigned int word_count:5;
+    unsigned int word_count1:2;
+
+    unsigned int word_count2:3;
     unsigned int parity_bit:1;
+    unsigned int padding:4;
+    #else
+    unsigned int rt_address:5;
+    unsigned int sync_bits:3;
+    
+    unsigned int word_count1:2;
+    unsigned int subaddress:5;
+    unsigned int tr_bit:1;
+
+    unsigned int padding:4;
+    unsigned int parity_bit:1;
+    unsigned int word_count2:3;   
+    #endif
 
 }command_word_s;
 
-typedef struct //__attribute__((__packed__))
+typedef struct __attribute__((__packed__))
 {
+    #if BYTE_ORDER == BIG_ENDIAN
     unsigned int sync_bits:3;
     unsigned int rt_address:5;
+
     unsigned int message_error:1;
     unsigned int instrumentation:1;
     unsigned int service_request:1;
     unsigned int reserved:3;
     unsigned int brdcst_received:1;
     unsigned int busy:1;
+
     unsigned int subsystem_flag:1;
     unsigned int dynamic_bus_control_accept:1;
     unsigned int terminal_flag:1;
     unsigned int parity_bit:1;
+    unsigned int padding:4;
+    #else
+    unsigned int rt_address:5;
+    unsigned int sync_bits:3;
+
+    unsigned int busy:1;
+    unsigned int brdcst_received:1;
+    unsigned int reserved:3;
+    unsigned int service_request:1;
+    unsigned int instrumentation:1;
+    unsigned int message_error:1;
+
+    unsigned int padding:4;
+    unsigned int parity_bit:1;
+    unsigned int terminal_flag:1;
+    unsigned int dynamic_bus_control_accept:1;
+    unsigned int subsystem_flag:1;
+    #endif
+
 }status_word_s;
 
-typedef struct //__attribute__((__packed__))
+typedef struct __attribute__((__packed__)) 
 {
+    #if BYTE_ORDER == BIG_ENDIAN
     unsigned int sync_bits:3;
-    unsigned int character1:8;
-    unsigned int character2:8;
+    unsigned int character_A1:5;
+
+    unsigned int character_A2:3;
+    unsigned int character_B1:5;
+
+    unsigned int character_B2:3;
     unsigned int parity_bit:1;
+    unsigned int padding:4;
+    #else
+    unsigned int character_A1:5;
+    unsigned int sync_bits:3;
+
+    unsigned int character_B1:5;
+    unsigned int character_A2:3;
+
+    unsigned int padding:4;
+    unsigned int parity_bit:1;
+    unsigned int character_B2:3;
+    #endif
 
 }data_word_s;
 
-typedef struct //__attribute__((__packed__))
+typedef struct __attribute__((__packed__))
 {
+    #if BYTE_ORDER == BIG_ENDIAN
     unsigned int sync_bits:3;
     unsigned int reserved0:5;
+
     unsigned int reserved1:8;
+ 
+    unsigned int reserved2:8;
+    unsigned int padding:4;
+    #else
+    unsigned int reserved0:5;
+    unsigned int sync_bits:3;
+    
+    unsigned int reserved1:8;
+
+    unsigned int padding:4;
     unsigned int reserved2:4;
+    #endif
 }generic_word_s;
+
+/* MACRO to split a data word character into its 2 corresponding fields in data_word_s */
+#define SPLIT_CHAR(in_char, out_char_upper5, out_char_lower3) \
+{                                                             \
+    out_char_upper5 = ((int)in_char>>3) & 0x1F;               \
+    out_char_lower3 = ((int)in_char & 0x7);                   \
+}
+
+#define COMBINE_CHAR(in_char_upper5, in_char_lower3)          \
+    (in_char_upper5<<3) | (in_char_lower3)               
 
 char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','B'},
@@ -74,7 +164,7 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','H'},
                              {'A','I'},
                              {'A','J'},
-                             {'A','K'},
+                             {'A','K'}, //TODO
                              {'A','L'},
                              {'A','M'},
                              {'A','N'},
@@ -92,43 +182,43 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','Z'},
                              {'B','A'},
                              {'B','B'},
-                             {'B','C'},
-                             {'B','D'},
-                             {'B','E'},
-                             {'B','F'},
-                             {'B','G'},
-                             {'B','H'},
-                             {'B','I'},
-                             {'B','J'},
-                             {'B','K'},
-                             {'B','L'},
-                             {'B','M'},
-                             {'B','N'},
-                             {'B','O'},
-                             {'B','P'},
-                             {'B','Q'},
-                             {'B','R'},
-                             {'B','S'},
-                             {'B','T'},
-                             {'B','U'},
-                             {'B','V'},
-                             {'B','W'},
-                             {'B','X'},
-                             {'B','Y'},
-                             {'B','Z'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
+                             {'B','A'},
                              {'C','A'},
-                             {'C','B'},
-                             {'C','C'},
-                             {'C','D'},
-                             {'C','E'},
-                             {'C','F'},
-                             {'C','G'},
-                             {'C','H'},
-                             {'C','I'},
-                             {'C','J'},
-                             {'C','K'},
-                             {'C','L'},                            
-                             {'C','M'} };
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},
+                             {'C','A'},                            
+                             {'C','A'} };
 
 /* ========== FOREWARD DECLARATIONS ========== */
 
@@ -137,6 +227,8 @@ void decode_data_word(data_word_s * data_word);
 void build_bc_data_word(char message_byte1, char message_byte2);
 void build_command_word(int rt_address, char tr_bit, int subaddress, int word_count);
 void analyze_status_word(status_word_s * status_word);
+void interpret_incoming_frame_bc(generic_word_s * generic_word);
+void interpret_incoming_frame_rt(generic_word_s * generic_word);
 
 
 // A hacky way to check that command words are created correctly :)
@@ -158,11 +250,11 @@ void print_word(command_word_s * word_check)
         (word_check->subaddress & 0x04 ? '1' : '0'), \
         (word_check->subaddress & 0x02 ? '1' : '0'), \
         (word_check->subaddress & 0x01 ? '1' : '0'), \
-        (word_check->word_count & 0x10 ? '1' : '0'), \
-        (word_check->word_count & 0x08 ? '1' : '0'), \
-        (word_check->word_count & 0x04 ? '1' : '0'), \
-        (word_check->word_count & 0x02 ? '1' : '0'), \
-        (word_check->word_count & 0x01 ? '1' : '0'), \
+        (word_check->word_count1 & 0x02 ? '1' : '0'), \
+        (word_check->word_count1 & 0x01 ? '1' : '0'), \
+        (word_check->word_count2 & 0x04 ? '1' : '0'), \
+        (word_check->word_count2 & 0x02 ? '1' : '0'), \
+        (word_check->word_count2 & 0x01 ? '1' : '0'), \
         (word_check->parity_bit & 0x01 ? '1' : '0')
 
         printf("Command word: "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(word_check));
@@ -177,26 +269,29 @@ void print_data_word(data_word_s * word_check)
         (word_check->sync_bits & 0x04 ? '1' : '0'), \
         (word_check->sync_bits & 0x02 ? '1' : '0'), \
         (word_check->sync_bits & 0x01 ? '1' : '0'), \
-        (word_check->character1 & 0x80 ? '1' : '0'), \
-        (word_check->character1 & 0x40 ? '1' : '0'), \
-        (word_check->character1 & 0x20 ? '1' : '0'), \
-        (word_check->character1 & 0x10 ? '1' : '0'), \
-        (word_check->character1 & 0x08 ? '1' : '0'), \
-        (word_check->character1 & 0x04 ? '1' : '0'), \
-        (word_check->character1 & 0x02 ? '1' : '0'), \
-        (word_check->character1 & 0x01 ? '1' : '0'), \
-        (word_check->character2 & 0x80 ? '1' : '0'), \
-        (word_check->character2 & 0x40 ? '1' : '0'), \
-        (word_check->character2 & 0x20 ? '1' : '0'), \
-        (word_check->character2 & 0x10 ? '1' : '0'), \
-        (word_check->character2 & 0x08 ? '1' : '0'), \
-        (word_check->character2 & 0x04 ? '1' : '0'), \
-        (word_check->character2 & 0x02 ? '1' : '0'), \
-        (word_check->character2 & 0x01 ? '1' : '0'), \
+        (word_check->character_A1 & 0x10 ? '1' : '0'), \
+        (word_check->character_A1 & 0x08 ? '1' : '0'), \
+        (word_check->character_A1 & 0x04 ? '1' : '0'), \
+        (word_check->character_A1 & 0x02 ? '1' : '0'), \
+        (word_check->character_A1 & 0x01 ? '1' : '0'), \
+        (word_check->character_A2 & 0x04 ? '1' : '0'), \
+        (word_check->character_A2 & 0x02 ? '1' : '0'), \
+        (word_check->character_A2 & 0x01 ? '1' : '0'), \
+        (word_check->character_B1 & 0x10 ? '1' : '0'), \
+        (word_check->character_B1 & 0x08 ? '1' : '0'), \
+        (word_check->character_B1 & 0x04 ? '1' : '0'), \
+        (word_check->character_B1 & 0x02 ? '1' : '0'), \
+        (word_check->character_B1 & 0x01 ? '1' : '0'), \
+        (word_check->character_B2 & 0x04 ? '1' : '0'), \
+        (word_check->character_B2 & 0x02 ? '1' : '0'), \
+        (word_check->character_B2 & 0x01 ? '1' : '0'), \
         (word_check->parity_bit & 0x01 ? '1' : '0')
 
         printf("Data word: "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY2(word_check));
-        printf("Characters: %c%c\n", word_check->character1, word_check->character2);
+        //printf("Characters: %c%c\n", (word_check->character_A1<<3) | (word_check->character_A2), (word_check->character_B1<<3) | (word_check->character_B2));
+        printf("Characters: %c%c\n", 
+                COMBINE_CHAR(word_check->character_A1, word_check->character_A2),
+                COMBINE_CHAR(word_check->character_B1, word_check->character_B2));
 
 }
 
@@ -302,9 +397,12 @@ void build_command_word(int rt_address, char tr_bit, int subaddress, int word_co
         command_word.tr_bit = 0;
     }
     command_word.subaddress = subaddress;
-    command_word.word_count = word_count;
+    command_word.word_count1 = (word_count >> 3) & 0x3;
+    command_word.word_count2 = (word_count) & 0x7;
     command_word.parity_bit = 1;
-    print_word(&command_word);
+    //print_word(&command_word);
+
+    interpret_incoming_frame_rt((generic_word_s*)&command_word); //temporary for testing
     //TODO send word to socket
 }
 
@@ -314,14 +412,24 @@ void build_bc_data_word(char message_byte1, char message_byte2)
 {
     data_word_s data_word;
     data_word.sync_bits = SYNC_BITS_DATA;
-    data_word.character1 = (int)message_byte1;
-    data_word.character2 = (int)message_byte2;
+    SPLIT_CHAR(message_byte1, data_word.character_A1, data_word.character_A2);
+
+    SPLIT_CHAR(message_byte2, data_word.character_B1, data_word.character_B2);
     data_word.parity_bit = 1;
-    print_data_word(&data_word);
+    //print_data_word(&data_word);
+
+    interpret_incoming_frame_rt((generic_word_s*)&data_word); //temporary for testing
     //TODO send word to socket
 }
 
+/* The following functions are used to create the status/data words sent
+   by the RTs based on the command words received */
 
+/*void send_word_to_bc(command_word_s * command)
+{
+
+}
+*/
 void build_rt_data_word(int subaddress, int data_word_count)
 {
     data_word_s data_word;
@@ -337,10 +445,12 @@ void build_rt_data_word(int subaddress, int data_word_count)
     for(data_words_sent = 0; data_words_sent < data_word_count; data_words_sent++)
     {
         data_word.sync_bits = SYNC_BITS_DATA;
-        data_word.character1 = (int)rt_memory_2d[subaddress+data_words_sent][0];
-        data_word.character2 = (int)rt_memory_2d[subaddress+data_words_sent][1];
+        //data_word.character1 = (int)rt_memory_2d[subaddress+data_words_sent][0];
+        //data_word.character2 = (int)rt_memory_2d[subaddress+data_words_sent][1];
+        SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][0], data_word.character_A1, data_word.character_A2);
+        SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][1], data_word.character_B1, data_word.character_B2);
         data_word.parity_bit = 1;
-        print_data_word(&data_word);
+        //print_data_word(&data_word);
         //TODO: send out data_word
     }
 }
@@ -382,8 +492,7 @@ void interpret_incoming_frame_rt(generic_word_s * generic_word)
     }
     else
     {
-        //TODO: handle malformed packet
-        //print error message
+        printf("Invalid word received from BC.");
         return;
     }
     
@@ -402,8 +511,7 @@ void interpret_incoming_frame_bc(generic_word_s * generic_word)
     }
     else
     {
-        //TODO: handle malformed packet
-        //print error message
+        printf("Invalid word received from RT.");
         return;
     }
 }
@@ -418,20 +526,22 @@ void analyze_command_word(command_word_s * command_word)
     else
     {
         build_status_word(command_word->rt_address);
-        build_rt_data_word(command_word->subaddress, command_word->word_count);
+        build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
     }
 
 }
 
 void decode_data_word(data_word_s * data_word)
 {
-    printf("%c%c", data_word->character1, data_word->character2);
+    printf("%c%c\n", 
+        COMBINE_CHAR(data_word->character_A1, data_word->character_A2), 
+        COMBINE_CHAR(data_word->character_B1, data_word->character_B2));
 }
 
 void analyze_status_word(status_word_s * status_word)
 {
-    printf("terminal_flag_bit: %d, busy bit: %d, brdcst_recvd_bit: %d, rt_address: %d, message_error_bit: %d, subsystem_flag_bit: %d,\
-     dynamic_bus_control_accpt: %d, reserved_bits: %d, service_request_bit: %d, instrumentation_bit: %d", status_word->terminal_flag, status_word->busy,\
+    printf("Status word: terminal_flag_bit: %d, busy bit: %d, brdcst_recvd_bit: %d, rt_address: %d, message_error_bit: %d, subsystem_flag_bit: %d,\
+     dynamic_bus_control_accpt: %d, reserved_bits: %d, service_request_bit: %d, instrumentation_bit: %d\n", status_word->terminal_flag, status_word->busy,\
      status_word->brdcst_received, status_word->rt_address, status_word->message_error, status_word->subsystem_flag, status_word->dynamic_bus_control_accept,\
      status_word->reserved, status_word->service_request, status_word->instrumentation);
 }
@@ -440,8 +550,6 @@ void analyze_status_word(status_word_s * status_word)
 
 /* The following functions are used to initialize 
    a UDP socket */
-
-
 
 
 /* ============ MAIN =========== */ 
