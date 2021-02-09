@@ -6,6 +6,7 @@
 #include <netinet/in.h> 
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 
 /* sync bits for data word = 001b */
@@ -20,11 +21,13 @@
 /* sub address 5-bit max value */
 #define SUB_ADDR_MAX 0x1F
 
-/* Here we define structures for the three types of words defined
-   in the MIL-STD-1553 spec: command, status, and data words
-   a structure "generic word" is also defined to take in a word of
-   unknown variety until it can be assigned the appropriate structure
-   by looking at sync bits */
+/* Client class types */
+#define BC_CLASS 1
+#define RT_CLASS 2
+
+//Defines ip address as broadcast address so all words are sent as broadcast
+#define IP_ADDR "255.255.255.255"
+#define BUFFER_SIZE 1024 
 
 #ifndef BYTE_ORDER
 #define BIG_ENDIAN 4321
@@ -32,6 +35,11 @@
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
 
+/* Here we define structures for the three types of words defined
+   in the MIL-STD-1553 spec: command, status, and data words
+   a structure "generic word" is also defined to take in a word of
+   unknown variety until it can be assigned the appropriate structure
+   by looking at sync bits */
 typedef struct __attribute__((__packed__))
 {
     #if BYTE_ORDER == BIG_ENDIAN
@@ -145,6 +153,17 @@ typedef struct __attribute__((__packed__))
     #endif
 }generic_word_s;
 
+/* creates a structure to store unique rt/bc data passed by the simulator codes */
+typedef struct
+{
+    unsigned int source_port;
+    unsigned int destination_port;
+    unsigned int rt_address;
+    unsigned int user_class; //specifies whether a user is a bus controller or remote terminal
+}client_cb;
+
+client_cb control_block; //global variable for client control block
+
 /* MACRO to split a data word character into its 2 corresponding fields in data_word_s */
 #define SPLIT_CHAR(in_char, out_char_upper5, out_char_lower3) \
 {                                                             \
@@ -164,7 +183,7 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','H'},
                              {'A','I'},
                              {'A','J'},
-                             {'A','K'}, //TODO
+                             {'A','K'},
                              {'A','L'},
                              {'A','M'},
                              {'A','N'},
@@ -182,43 +201,43 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','Z'},
                              {'B','A'},
                              {'B','B'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
-                             {'B','A'},
+                             {'B','C'},
+                             {'B','D'},
+                             {'B','E'},
+                             {'B','F'},
+                             {'B','G'},
+                             {'B','H'},
+                             {'B','I'},
+                             {'B','J'},
+                             {'B','K'},
+                             {'B','L'},
+                             {'B','M'},
+                             {'B','N'},
+                             {'B','O'},
+                             {'B','P'},
+                             {'B','Q'},
+                             {'B','R'},
+                             {'B','S'},
+                             {'B','T'},
+                             {'B','U'},
+                             {'B','V'},
+                             {'B','W'},
+                             {'B','X'},
+                             {'B','Y'},
+                             {'B','Z'},
                              {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},
-                             {'C','A'},                            
-                             {'C','A'} };
+                             {'C','B'},
+                             {'C','C'},
+                             {'C','D'},
+                             {'C','E'},
+                             {'C','F'},
+                             {'C','G'},
+                             {'C','H'},
+                             {'C','I'},
+                             {'C','J'},
+                             {'C','K'},
+                             {'C','L'},                            
+                             {'C','M'} };
 
 /* ========== FOREWARD DECLARATIONS ========== */
 
@@ -229,6 +248,7 @@ void build_command_word(int rt_address, char tr_bit, int subaddress, int word_co
 void analyze_status_word(status_word_s * status_word);
 void interpret_incoming_frame_bc(generic_word_s * generic_word);
 void interpret_incoming_frame_rt(generic_word_s * generic_word);
+void send_data(generic_word_s *data);
 
 
 // A hacky way to check that command words are created correctly :)
@@ -295,7 +315,7 @@ void print_data_word(data_word_s * word_check)
 
 }
 
-// A hacky way to print 20 bits from any pointer
+// A hacky way to print 3 bytes from any pointer
 void print_void(void * void_ptr)
 {
     char * word_check = (char *)void_ptr;
@@ -402,8 +422,9 @@ void build_command_word(int rt_address, char tr_bit, int subaddress, int word_co
     command_word.parity_bit = 1;
     //print_word(&command_word);
 
-    interpret_incoming_frame_rt((generic_word_s*)&command_word); //temporary for testing
+    //interpret_incoming_frame_rt((generic_word_s*)&command_word); //temporary for testing
     //TODO send word to socket
+    send_data((generic_word_s*)&command_word);
 }
 
 /* This fuction builds data words according the 1553 spec */
@@ -418,8 +439,9 @@ void build_bc_data_word(char message_byte1, char message_byte2)
     data_word.parity_bit = 1;
     //print_data_word(&data_word);
 
-    interpret_incoming_frame_rt((generic_word_s*)&data_word); //temporary for testing
+    //interpret_incoming_frame_rt((generic_word_s*)&data_word); //temporary for testing
     //TODO send word to socket
+    send_data((generic_word_s*)&data_word);
 }
 
 /* The following functions are used to create the status/data words sent
@@ -450,8 +472,10 @@ void build_rt_data_word(int subaddress, int data_word_count)
         SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][0], data_word.character_A1, data_word.character_A2);
         SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][1], data_word.character_B1, data_word.character_B2);
         data_word.parity_bit = 1;
-        //print_data_word(&data_word);
+        
+        //interpret_incoming_frame_bc((generic_word_s*)&data_word);
         //TODO: send out data_word
+        send_data((generic_word_s*)&data_word);
     }
 }
 
@@ -470,7 +494,11 @@ void build_status_word(int rt_address)
     status_word.dynamic_bus_control_accept = 0;
     status_word.terminal_flag = 1;
     status_word.parity_bit = 1;
-    analyze_status_word(&status_word);
+
+    //interpret_incoming_frame_bc((generic_word_s*)&status_word); //temporary for testing
+    //analyze_status_word(&status_word); //temporary for testing
+    send_data((generic_word_s*)&status_word);
+
 }
 
 
@@ -549,11 +577,114 @@ void analyze_status_word(status_word_s * status_word)
 
 
 /* The following functions are used to initialize 
-   a UDP socket */
+   a UDP socket 
+*/
+
+//starts a broadcast socket to listen for incoming packets
+void *initialize_listener() 
+{ 
+    printf("Initializing listener\n");
+    int socket_listener; 
+    char buffer[BUFFER_SIZE];  
+    struct sockaddr_in address; 
+    int n;
+    unsigned int len;
+
+    int so_broadcast = 1;
+
+    if ( (socket_listener = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) 
+    { 
+        perror("socket creation failed\n"); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if(setsockopt(socket_listener, SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)) < 0)
+    {
+        printf("Error in setting broadcast option\n");
+    }
 
 
-/* ============ MAIN =========== */ 
-int main()
+    memset(&address, 0, sizeof(address)); 
+       
+    address.sin_family = AF_INET; 
+    address.sin_port = htons(control_block.source_port); 
+    address.sin_addr.s_addr = INADDR_ANY; 
+      
+    if ( bind(socket_listener, (const struct sockaddr *)&address, sizeof(address)) < 0 ) 
+    { 
+        perror("bind failed\n"); 
+        exit(EXIT_FAILURE); 
+    }   
+
+    while(1)
+    {
+          
+        n = recvfrom(socket_listener, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &address, &len); 
+        buffer[n] = '\0'; 
+        if (control_block.user_class == BC_CLASS)
+        {
+            interpret_incoming_frame_bc((generic_word_s*)buffer);
+        }
+        else if (control_block.user_class == RT_CLASS)
+        {
+            interpret_incoming_frame_rt((generic_word_s*)buffer);
+        }
+        else
+        {
+            printf("Invalid user class: %d\n", control_block.user_class);
+        }
+    }
+    return NULL;
+    
+} 
+
+
+//creates a socket to send data
+void send_data(generic_word_s *data)
 {
-    return 0;
+    //printf("Sending data\n");
+    int socket_sender; 
+    char buffer[BUFFER_SIZE];
+    int so_broadcast;
+    so_broadcast = 1; 
+    struct sockaddr_in address;
+
+    if ( (socket_sender = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) 
+    { 
+        perror("socket creation failed\n"); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if(setsockopt(socket_sender, SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)) < 0)
+    {
+        printf("Error in setting broadcast option\n");
+    }
+
+
+    memset(&address, 0, sizeof(address)); 
+      
+    address.sin_family = AF_INET; 
+    address.sin_port = htons(control_block.destination_port); 
+    address.sin_addr.s_addr = inet_addr(IP_ADDR); 
+
+    int n, len;
+    sendto(socket_sender, (const void *)data, sizeof(data), 0, (const struct sockaddr *) &address, sizeof(address)); 
+    //printf("message sent.\n"); 
+    
+}
+
+/* Creates a control block containing all the necessary information and starts
+   a listening socket */
+void initialize_library(int source_port, int destination_port, int rt_address, int class)
+{
+    
+    control_block.source_port = source_port;
+    control_block.destination_port = destination_port;
+    control_block.rt_address = rt_address;
+    control_block.user_class = class;
+
+    pthread_t thread1;
+    int listener;
+    listener = pthread_create(&thread1, NULL, initialize_listener, NULL);
+
 }
