@@ -43,27 +43,27 @@
 typedef struct __attribute__((__packed__))
 {
     #if BYTE_ORDER == BIG_ENDIAN
-    unsigned int sync_bits:3;
-    unsigned int rt_address:5;
+    unsigned char sync_bits:3;
+    unsigned char rt_address:5;
 
-    unsigned int tr_bit:1;
-    unsigned int subaddress:5;
-    unsigned int word_count1:2;
+    unsigned char tr_bit:1;
+    unsigned char subaddress:5;
+    unsigned char word_count1:2;
 
-    unsigned int word_count2:3;
-    unsigned int parity_bit:1;
-    unsigned int padding:4;
+    unsigned char word_count2:3;
+    unsigned char parity_bit:1;
+    unsigned char padding:4;
     #else
-    unsigned int rt_address:5;
-    unsigned int sync_bits:3;
+    unsigned char rt_address:5;
+    unsigned char sync_bits:3;
     
-    unsigned int word_count1:2;
-    unsigned int subaddress:5;
-    unsigned int tr_bit:1;
+    unsigned char word_count1:2;
+    unsigned char subaddress:5;
+    unsigned char tr_bit:1;
 
-    unsigned int padding:4;
-    unsigned int parity_bit:1;
-    unsigned int word_count2:3;   
+    unsigned char padding:4;
+    unsigned char parity_bit:1;
+    unsigned char word_count2:3;   
     #endif
 
 }command_word_s;
@@ -71,37 +71,37 @@ typedef struct __attribute__((__packed__))
 typedef struct __attribute__((__packed__))
 {
     #if BYTE_ORDER == BIG_ENDIAN
-    unsigned int sync_bits:3;
-    unsigned int rt_address:5;
+    unsigned char sync_bits:3;
+    unsigned char rt_address:5;
 
-    unsigned int message_error:1;
-    unsigned int instrumentation:1;
-    unsigned int service_request:1;
-    unsigned int reserved:3;
-    unsigned int brdcst_received:1;
-    unsigned int busy:1;
+    unsigned char message_error:1;
+    unsigned char instrumentation:1;
+    unsigned char service_request:1;
+    unsigned char reserved:3;
+    unsigned char brdcst_received:1;
+    unsigned char busy:1;
 
-    unsigned int subsystem_flag:1;
-    unsigned int dynamic_bus_control_accept:1;
-    unsigned int terminal_flag:1;
-    unsigned int parity_bit:1;
-    unsigned int padding:4;
+    unsigned char subsystem_flag:1;
+    unsigned char dynamic_bus_control_accept:1;
+    unsigned char terminal_flag:1;
+    unsigned char parity_bit:1;
+    unsigned char padding:4;
     #else
-    unsigned int rt_address:5;
-    unsigned int sync_bits:3;
+    unsigned char rt_address:5;
+    unsigned char sync_bits:3;
 
-    unsigned int busy:1;
-    unsigned int brdcst_received:1;
-    unsigned int reserved:3;
-    unsigned int service_request:1;
-    unsigned int instrumentation:1;
-    unsigned int message_error:1;
+    unsigned char busy:1;
+    unsigned char brdcst_received:1;
+    unsigned char reserved:3;
+    unsigned char service_request:1;
+    unsigned char instrumentation:1;
+    unsigned char message_error:1;
 
-    unsigned int padding:4;
-    unsigned int parity_bit:1;
-    unsigned int terminal_flag:1;
-    unsigned int dynamic_bus_control_accept:1;
-    unsigned int subsystem_flag:1;
+    unsigned char padding:4;
+    unsigned char parity_bit:1;
+    unsigned char terminal_flag:1;
+    unsigned char dynamic_bus_control_accept:1;
+    unsigned char subsystem_flag:1;
     #endif
 
 }status_word_s;
@@ -109,25 +109,25 @@ typedef struct __attribute__((__packed__))
 typedef struct __attribute__((__packed__)) 
 {
     #if BYTE_ORDER == BIG_ENDIAN
-    unsigned int sync_bits:3;
-    unsigned int character_A1:5;
+    unsigned char sync_bits:3;
+    unsigned char character_A1:5;
 
-    unsigned int character_A2:3;
-    unsigned int character_B1:5;
+    unsigned char character_A2:3;
+    unsigned char character_B1:5;
 
-    unsigned int character_B2:3;
-    unsigned int parity_bit:1;
-    unsigned int padding:4;
+    unsigned char character_B2:3;
+    unsigned char parity_bit:1;
+    unsigned char padding:4;
     #else
-    unsigned int character_A1:5;
-    unsigned int sync_bits:3;
+    unsigned char character_A1:5;
+    unsigned char sync_bits:3;
 
-    unsigned int character_B1:5;
-    unsigned int character_A2:3;
+    unsigned char character_B1:5;
+    unsigned char character_A2:3;
 
-    unsigned int padding:4;
-    unsigned int parity_bit:1;
-    unsigned int character_B2:3;
+    unsigned char padding:4;
+    unsigned char parity_bit:1;
+    unsigned char character_B2:3;
     #endif
 
 }data_word_s;
@@ -135,21 +135,21 @@ typedef struct __attribute__((__packed__))
 typedef struct __attribute__((__packed__))
 {
     #if BYTE_ORDER == BIG_ENDIAN
-    unsigned int sync_bits:3;
-    unsigned int reserved0:5;
+    unsigned char sync_bits:3;
+    unsigned char reserved0:5;
 
-    unsigned int reserved1:8;
+    unsigned char reserved1:8;
  
-    unsigned int reserved2:8;
-    unsigned int padding:4;
+    unsigned char reserved2:8;
+    unsigned char padding:4;
     #else
-    unsigned int reserved0:5;
-    unsigned int sync_bits:3;
+    unsigned char reserved0:5;
+    unsigned char sync_bits:3;
     
-    unsigned int reserved1:8;
+    unsigned char reserved1:8;
 
-    unsigned int padding:4;
-    unsigned int reserved2:4;
+    unsigned char padding:4;
+    unsigned char reserved2:4;
     #endif
 }generic_word_s;
 
@@ -668,7 +668,8 @@ void send_data(generic_word_s *data)
     address.sin_addr.s_addr = inet_addr(IP_ADDR); 
 
     int n, len;
-    sendto(socket_sender, (const void *)data, sizeof(data), 0, (const struct sockaddr *) &address, sizeof(address)); 
+    
+    sendto(socket_sender, (const void *)data, sizeof(generic_word_s), 0, (const struct sockaddr *) &address, sizeof(address)); 
     //printf("message sent.\n"); 
     
 }
