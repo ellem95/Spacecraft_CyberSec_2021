@@ -1,7 +1,7 @@
 #include "MIL-STD-1553_Library.c"
 
-#define SOURCE_PORT 9997
-#define DESTINATION_PORT 9998
+#define SOURCE_PORT 2000
+#define DESTINATION_PORT 2001
 #define RT_ADDRESS 0x00
 #define USER_CLASS 1
 
