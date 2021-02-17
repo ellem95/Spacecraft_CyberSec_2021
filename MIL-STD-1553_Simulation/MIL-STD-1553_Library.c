@@ -548,11 +548,11 @@ void build_rt_data_word(int subaddress, int data_word_count)
 /* Status word values have been hard coded to the specific values
    used in previous iterations of 1553 code. This could be
    updated for greater fidelity to actual operation */
-void build_status_word(int rt_address)
+void build_status_word()
 {
     status_word_s status_word;
     status_word.sync_bits = SYNC_BITS_STATUS;
-    status_word.rt_address = rt_address;
+    status_word.rt_address = control_block.rt_address;
     status_word.message_error = 0;
     status_word.instrumentation = 0;
     status_word.service_request = 0;
@@ -618,29 +618,33 @@ void interpret_incoming_frame_bc(generic_word_s * generic_word)
    transmit or receive and responds accordingly */
 void analyze_command_word(command_word_s * command_word)
 {
-    print_word(command_word);
-    if(command_word->tr_bit == 0)
+    if (command_word->rt_address == control_block.rt_address)
     {
-        if (command_word->subaddress == 0 || command_word->subaddress == 31)
+        print_word(command_word);
+        if(command_word->tr_bit == 0)
         {
-            build_status_word(command_word->rt_address);
-            analyze_mode_code(command_word);
+            if (command_word->subaddress == 0 || command_word->subaddress == 31)
+            {
+                build_status_word();
+                analyze_mode_code(command_word);
+            }
         }
-    }
-    else if(command_word->tr_bit == 1)
-    {
-        if (command_word->subaddress == 0 || command_word->subaddress == 31)
+        else if(command_word->tr_bit == 1)
         {
-            build_status_word(command_word->rt_address);
-            analyze_mode_code(command_word);
-        }
-        else
-        {
-            build_status_word(command_word->rt_address);
-            build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
-        }
+            if (command_word->subaddress == 0 || command_word->subaddress == 31)
+            {
+                build_status_word();
+                analyze_mode_code(command_word);
+            }
+            else
+            {
+                build_status_word();
+                build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
+            }
         
+        }
     }
+    
 
 }
 
@@ -701,9 +705,11 @@ void analyze_mode_code(command_word_s * command_word)
 /* Prints data words received */
 void decode_data_word(data_word_s * data_word)
 {
+    
     printf("%c%c\n", 
         COMBINE_CHAR(data_word->character_A1, data_word->character_A2), 
         COMBINE_CHAR(data_word->character_B1, data_word->character_B2));
+
 }
 
 /* Prints status words */
