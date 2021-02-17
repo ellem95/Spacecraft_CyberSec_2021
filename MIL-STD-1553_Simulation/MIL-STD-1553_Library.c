@@ -25,6 +25,10 @@
 #define BC_CLASS 1
 #define RT_CLASS 2
 
+/* Define the functions of the remote terminals as RT addresses (ie. the flight software is at rt address 1) */
+#define FLIGHT_SOFTWARE 0x01
+#define MULTIPLEXOR 0x02
+
 //Defines ip address as broadcast address so all words are sent as broadcast
 #define IP_ADDR "255.255.255.255"
 #define BUFFER_SIZE 1024 
@@ -39,7 +43,10 @@
    in the MIL-STD-1553 spec: command, status, and data words
    a structure "generic word" is also defined to take in a word of
    unknown variety until it can be assigned the appropriate structure
-   by looking at sync bits */
+   by looking at sync bits. Previous iterations of the 1553 code
+   sent two eight-bit characters as data words, which I have
+   maintained. However, in the structure, the bits of these words
+   are split in order to be consistant with byte lines */
 typedef struct __attribute__((__packed__))
 {
     #if BYTE_ORDER == BIG_ENDIAN
@@ -153,7 +160,8 @@ typedef struct __attribute__((__packed__))
     #endif
 }generic_word_s;
 
-/* creates a structure to store unique rt/bc data passed by the simulator codes */
+/* creates a structure to store unique rt/bc data passed by the
+   simulator codes */
 typedef struct
 {
     unsigned int source_port;
@@ -162,9 +170,10 @@ typedef struct
     unsigned int user_class; //specifies whether a user is a bus controller or remote terminal
 }client_cb;
 
-client_cb control_block; //global variable for client control block
+client_cb control_block; //global variable for client control block structure
 
-/* MACRO to split a data word character into its 2 corresponding fields in data_word_s */
+/* MACROs to split a data word character into its 2 corresponding
+  fields in data_word_s and recombine them  */
 #define SPLIT_CHAR(in_char, out_char_upper5, out_char_lower3) \
 {                                                             \
     out_char_upper5 = ((int)in_char>>3) & 0x1F;               \
@@ -174,6 +183,11 @@ client_cb control_block; //global variable for client control block
 #define COMBINE_CHAR(in_char_upper5, in_char_lower3)          \
     (in_char_upper5<<3) | (in_char_lower3)               
 
+
+/* Represents the RTs memory and is used to send data to the BC.
+   This could be edited in future to create a more realistic
+   representation of RT memory
+ */
 char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','B'},
                              {'A','C'},
@@ -239,7 +253,51 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'C','L'},                            
                              {'C','M'} };
 
-/* ========== FOREWARD DECLARATIONS ========== */
+
+/* ==================== MODE CODES (FOR REFERENCE) ========================
+
+   0x00 Dynamic Bus Control
+   0x01 Synchronize
+   0x02 Transmit Status Word
+   0x03 Initiate Self Test
+   0x04 Transmitter Shutdown
+   0x05 Override Transmitter Shutdown
+   0x06 Inhibit Terminal Flag
+   0x07 Override Inhibit Terminal Flag
+   0x08 Reset Remote Terminal
+   0x09-0x0F Reserved
+   0x10 Transmit Vector Word
+   0x11 Synchronize (w/data)
+   0x12 Transmit Last Command Word
+   0x13 Transmit BIT word
+   0x14 Selected transmitter shutdown
+   0x15 Override transmitter shutdown
+   0x16-0x1F Reserved
+
+   ======================================================================== */
+
+typedef enum
+{
+   DYNAMIC_BUS_CONTROL,
+   SYNCHRONIZE,
+   TRANSMIT_STATUS_WORD,
+   INTIATE_SELF_TEST,
+   TRANSMITTER_SHUTDOWN,
+   OVERRIDE_TRANSMITTER_SHUTDOWN,
+   INHIBIT_TERMINAL_FLAG,
+   OVERRIDE_INHIBIT_TERMINAL_FLAG,
+   RESET_REMOTE_TERMINAL,
+   TRANSMIT_VECTOR_WORD = 0x10, //Defined to skip over reserved codes
+   SYNCHRONIZE_DATA,
+   TRANSMIT_LAST_COMMAND_WORD,
+   TRANSMIT_BIT_WORD,
+   SELECTED_TRANSMITTER_SHUTDOWN,
+   OVERRIDE_SELECTED_TRANSMITTER_SHUTDOWN  
+} mode_code_e;
+
+
+
+/* ============= FOREWARD DECLARATIONS ============= */
 
 void analyze_command_word(command_word_s * command_word);
 void decode_data_word(data_word_s * data_word);
@@ -249,9 +307,10 @@ void analyze_status_word(status_word_s * status_word);
 void interpret_incoming_frame_bc(generic_word_s * generic_word);
 void interpret_incoming_frame_rt(generic_word_s * generic_word);
 void send_data(generic_word_s *data);
+void analyze_mode_code(command_word_s * command_word);
 
 
-// A hacky way to check that command words are created correctly :)
+// A hacky way to print command word bits :)
 void print_word(command_word_s * word_check)
 {
     #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n"
@@ -281,7 +340,7 @@ void print_word(command_word_s * word_check)
 
 }
 
-//A hacky way to check data words
+//A hacky way to print data word bits (for testing)
 void print_data_word(data_word_s * word_check)
 {
     #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n"
@@ -315,7 +374,7 @@ void print_data_word(data_word_s * word_check)
 
 }
 
-// A hacky way to print 3 bytes from any pointer
+// A hacky way to print 3 bytes from any pointer (for testing)
 void print_void(void * void_ptr)
 {
     char * word_check = (char *)void_ptr;
@@ -389,9 +448,7 @@ void send_data_to_rt(int rt_address, int subaddress, char message[])
         }
         character_number += 2;
 
-    }
-    
-    
+    }   
 
 }
 
@@ -403,27 +460,45 @@ void request_data_from_rt(int rt_address, int subaddress, int word_count)
 }
 
 /* This fuction builds command words according the 1553 spec */
+void send_mode_code(int rt_address, int mode_code)
+{
+    command_word_s mode_code_command;
+    mode_code_command.sync_bits = SYNC_BITS_CMD;
+    mode_code_command.rt_address = rt_address;
+    if (mode_code == 0x11 || mode_code == 0x14 || mode_code == 0x15)
+    {
+        mode_code_command.tr_bit = 0;
+    }
+    else
+    {
+        mode_code_command.tr_bit = 0;
+    }
+    mode_code_command.subaddress = 0;
+    mode_code_command.word_count1 = (mode_code >> 3) & 0x3;
+    mode_code_command.word_count2 = (mode_code) & 0x7;
+    send_data((generic_word_s*)&mode_code_command);
+
+}
 
 void build_command_word(int rt_address, char tr_bit, int subaddress, int word_count)
 {
     command_word_s command_word;
 
-    command_word.sync_bits = 4; //since the command word sync bits should be 100, we set this to 4 to get the correct bit values
+    command_word.sync_bits = SYNC_BITS_CMD; 
     command_word.rt_address = rt_address;
     if (tr_bit == 'T')
         command_word.tr_bit = 1;
-    else
+    else if (tr_bit == 'R')
     {
         command_word.tr_bit = 0;
     }
+    else
+        printf("Invalid T/R bit.\n");
     command_word.subaddress = subaddress;
-    command_word.word_count1 = (word_count >> 3) & 0x3;
+    command_word.word_count1 = (word_count >> 3) & 0x3; //TODO
     command_word.word_count2 = (word_count) & 0x7;
     command_word.parity_bit = 1;
     //print_word(&command_word);
-
-    //interpret_incoming_frame_rt((generic_word_s*)&command_word); //temporary for testing
-    //TODO send word to socket
     send_data((generic_word_s*)&command_word);
 }
 
@@ -438,20 +513,14 @@ void build_bc_data_word(char message_byte1, char message_byte2)
     SPLIT_CHAR(message_byte2, data_word.character_B1, data_word.character_B2);
     data_word.parity_bit = 1;
     //print_data_word(&data_word);
-
-    //interpret_incoming_frame_rt((generic_word_s*)&data_word); //temporary for testing
-    //TODO send word to socket
     send_data((generic_word_s*)&data_word);
 }
 
-/* The following functions are used to create the status/data words sent
-   by the RTs based on the command words received */
+/* =======================================================================
+   The following functions are used to create the status/data words sent
+   by the RTs based on the command words received
+   ======================================================================= */
 
-/*void send_word_to_bc(command_word_s * command)
-{
-
-}
-*/
 void build_rt_data_word(int subaddress, int data_word_count)
 {
     data_word_s data_word;
@@ -467,18 +536,18 @@ void build_rt_data_word(int subaddress, int data_word_count)
     for(data_words_sent = 0; data_words_sent < data_word_count; data_words_sent++)
     {
         data_word.sync_bits = SYNC_BITS_DATA;
-        //data_word.character1 = (int)rt_memory_2d[subaddress+data_words_sent][0];
-        //data_word.character2 = (int)rt_memory_2d[subaddress+data_words_sent][1];
+
         SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][0], data_word.character_A1, data_word.character_A2);
         SPLIT_CHAR((int)rt_memory_2d[subaddress+data_words_sent][1], data_word.character_B1, data_word.character_B2);
         data_word.parity_bit = 1;
         
-        //interpret_incoming_frame_bc((generic_word_s*)&data_word);
-        //TODO: send out data_word
         send_data((generic_word_s*)&data_word);
     }
 }
 
+/* Status word values have been hard coded to the specific values
+   used in previous iterations of 1553 code. This could be
+   updated for greater fidelity to actual operation */
 void build_status_word(int rt_address)
 {
     status_word_s status_word;
@@ -495,19 +564,18 @@ void build_status_word(int rt_address)
     status_word.terminal_flag = 1;
     status_word.parity_bit = 1;
 
-    //interpret_incoming_frame_bc((generic_word_s*)&status_word); //temporary for testing
-    //analyze_status_word(&status_word); //temporary for testing
     send_data((generic_word_s*)&status_word);
 
 }
 
 
-/* The following functions are used to interpret incoming
-   words and process them accordingly */
+/* ============================================================
+   The following functions are used to interpret incoming
+   words and process them accordingly
+   ============================================================ */
 
-/* This function determines whether an incoming word is a
-   data word or command word */
-
+/* This function determines whether an incoming word received by an
+   RT is a data word or command word */
 void interpret_incoming_frame_rt(generic_word_s * generic_word)
 {
     if(generic_word->sync_bits == SYNC_BITS_CMD)
@@ -527,6 +595,8 @@ void interpret_incoming_frame_rt(generic_word_s * generic_word)
     
 }
 
+/* This function determines whether an incoming word received by an
+   BC is a data word or command word */
 void interpret_incoming_frame_bc(generic_word_s * generic_word)
 {
     if(generic_word->sync_bits == SYNC_BITS_STATUS)
@@ -544,21 +614,91 @@ void interpret_incoming_frame_bc(generic_word_s * generic_word)
     }
 }
 
+/* This function determines if a command word is instructing to
+   transmit or receive and responds accordingly */
 void analyze_command_word(command_word_s * command_word)
 {
     print_word(command_word);
     if(command_word->tr_bit == 0)
     {
-        build_status_word(command_word->rt_address);
+        if (command_word->subaddress == 0 || command_word->subaddress == 31)
+        {
+            build_status_word(command_word->rt_address);
+            analyze_mode_code(command_word);
+        }
     }
-    else
+    else if(command_word->tr_bit == 1)
     {
-        build_status_word(command_word->rt_address);
-        build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
+        if (command_word->subaddress == 0 || command_word->subaddress == 31)
+        {
+            build_status_word(command_word->rt_address);
+            analyze_mode_code(command_word);
+        }
+        else
+        {
+            build_status_word(command_word->rt_address);
+            build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
+        }
+        
     }
 
 }
 
+void analyze_mode_code(command_word_s * command_word)
+{
+    mode_code_e mode_code = (command_word->word_count1<<3) | (command_word->word_count2); //TODO
+    switch(mode_code)
+    {
+        case DYNAMIC_BUS_CONTROL:
+            printf("Initializing mode code: dynamic bus control\n");
+            break;
+        case SYNCHRONIZE:
+            printf("Initializing mode code: synchronize\n");
+            break;
+        case TRANSMIT_STATUS_WORD:
+            printf("Initializing mode code: synchronize\n");
+            break;
+        case INTIATE_SELF_TEST:
+            printf("Initializing mode code: self test\n");
+            break;
+        case TRANSMITTER_SHUTDOWN:
+            printf("Initializing mode code: transmitter shutdown\n");
+            break;
+        case OVERRIDE_TRANSMITTER_SHUTDOWN:
+            printf("Initializing mode code: override transmitter shutdown\n");
+            break;
+        case INHIBIT_TERMINAL_FLAG:
+            printf("Initializing mode code: INHIBIT_TERMINAL_FLAG\n");
+            break;
+        case OVERRIDE_INHIBIT_TERMINAL_FLAG:
+            printf("Initializing mode code: OVERRIDE_INHIBIT_TERMINAL_FLAG\n");
+            break;
+        case RESET_REMOTE_TERMINAL:
+            printf("Initializing mode code: RESET_REMOTE_TERMINAL\n");
+            break;
+        case TRANSMIT_VECTOR_WORD:
+            printf("Initializing mode code: TRANSMIT_VECTOR_WORD\n");
+            break;
+        case SYNCHRONIZE_DATA:
+            printf("Initializing mode code: SYNCHRONIZE_DATA\n");
+            break;
+        case TRANSMIT_LAST_COMMAND_WORD:
+            printf("Initializing mode code: TRANSMIT_LAST_COMMAND_WORD\n");
+            break;
+        case TRANSMIT_BIT_WORD:
+            printf("Initializing mode code: TRANSMIT_BIT_WORD\n");
+            break;
+        case SELECTED_TRANSMITTER_SHUTDOWN:
+            printf("Initializing mode code: SELECTED_TRANSMITTER_SHUTDOWN\n");
+            break;
+        case OVERRIDE_SELECTED_TRANSMITTER_SHUTDOWN:
+            printf("Initializing mode code: OVERRIDE_TRANSMITTER_SHUTDOWN\n");
+            break;
+
+    }
+}
+
+/* Prints data words received */
 void decode_data_word(data_word_s * data_word)
 {
     printf("%c%c\n", 
@@ -566,6 +706,7 @@ void decode_data_word(data_word_s * data_word)
         COMBINE_CHAR(data_word->character_B1, data_word->character_B2));
 }
 
+/* Prints status words */
 void analyze_status_word(status_word_s * status_word)
 {
     printf("Status word: terminal_flag_bit: %d, busy bit: %d, brdcst_recvd_bit: %d, rt_address: %d, message_error_bit: %d, subsystem_flag_bit: %d,\
@@ -576,11 +717,12 @@ void analyze_status_word(status_word_s * status_word)
 
 
 
-/* The following functions are used to initialize 
-   a UDP socket 
-*/
+/* ===========================================================
+   The following functions are used to initialize 
+   the simulators and create a UDP broadcast socket 
+   =========================================================== */
 
-//starts a broadcast socket to listen for incoming packets
+//starts a socket to listen for incoming packets
 void *initialize_listener() 
 { 
     printf("Initializing listener\n");
@@ -594,25 +736,26 @@ void *initialize_listener()
 
     if ( (socket_listener = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) 
     { 
-        perror("socket creation failed\n"); 
+        perror("Socket creation failed\n"); 
         exit(EXIT_FAILURE); 
     }
 
     if(setsockopt(socket_listener, SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)) < 0)
     {
-        printf("Error in setting broadcast option\n");
+        perror("Error in setting broadcast option\n");
+        exit(EXIT_FAILURE);
     }
 
 
     memset(&address, 0, sizeof(address)); 
        
     address.sin_family = AF_INET; 
-    address.sin_port = htons(control_block.source_port); 
-    address.sin_addr.s_addr = INADDR_ANY; 
+    address.sin_port = htons(control_block.source_port); //Sets port to the source port passed by the RT simulator and set in the control block
+    address.sin_addr.s_addr = INADDR_ANY; //Binds to all interfaces
       
     if ( bind(socket_listener, (const struct sockaddr *)&address, sizeof(address)) < 0 ) 
     { 
-        perror("bind failed\n"); 
+        perror("Bind failed\n"); 
         exit(EXIT_FAILURE); 
     }   
 
@@ -621,7 +764,7 @@ void *initialize_listener()
           
         n = recvfrom(socket_listener, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &address, &len); 
         buffer[n] = '\0'; 
-        if (control_block.user_class == BC_CLASS)
+        if (control_block.user_class == BC_CLASS) //in order to know how to interpret the incoming word, the user class is referenced (which is set during initialization)
         {
             interpret_incoming_frame_bc((generic_word_s*)buffer);
         }
@@ -639,10 +782,9 @@ void *initialize_listener()
 } 
 
 
-//creates a socket to send data
+/* creates a socket to send data */
 void send_data(generic_word_s *data)
 {
-    //printf("Sending data\n");
     int socket_sender; 
     char buffer[BUFFER_SIZE];
     int so_broadcast;
@@ -657,7 +799,8 @@ void send_data(generic_word_s *data)
 
     if(setsockopt(socket_sender, SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)) < 0)
     {
-        printf("Error in setting broadcast option\n");
+        perror("Error in setting broadcast option\n");
+        exit(EXIT_FAILURE);
     }
 
 
@@ -668,14 +811,15 @@ void send_data(generic_word_s *data)
     address.sin_addr.s_addr = inet_addr(IP_ADDR); 
 
     int n, len;
-    
-    sendto(socket_sender, (const void *)data, sizeof(generic_word_s), 0, (const struct sockaddr *) &address, sizeof(address)); 
-    //printf("message sent.\n"); 
+
+    sendto(socket_sender, (const void *)data, sizeof(generic_word_s), 0, (const struct sockaddr *) &address, sizeof(address));
+    sleep(1);
     
 }
 
-/* Creates a control block containing all the necessary information and starts
-   a listening socket */
+/* This function initializes the simulators by creating a control block
+   containing all the necessary information and starting a listening
+   socket */
 void initialize_library(int source_port, int destination_port, int rt_address, int class)
 {
     
