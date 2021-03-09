@@ -25,13 +25,28 @@
 #define BC_CLASS 1
 #define RT_CLASS 2
 
-/* Define the functions of the remote terminals as RT addresses (ie. the flight software is at rt address 1) */
-#define FLIGHT_SOFTWARE 0x01
+/* Define the RT addresses of remote terminals and their spacecraft function (ie. the thruster
+   is at rt address 1). More remote terminals may be added to improve fidelity to
+   true satellite operation and their addresses and functions should be listed here. */
+#define THRUSTER 0x01
 #define MULTIPLEXOR 0x02
+#define STARTRACKER 0x03
+#define RADIO 0x04
+#define REACTION_WHEEL 0x05
 
-//Defines ip address as broadcast address so all words are sent as broadcast
-#define IP_ADDR "255.255.255.255"
+/* Defines ip address as broadcast address so all words are sent as broadcast */
+#define IP_ADDR "10.0.0.255"
 #define BUFFER_SIZE 1024 
+
+
+/* ============== Spacecraft Command List ============ */
+
+#define POINT_SC_AT_GROUNDSTATION 'A' //testing
+#define POINT_SC_AT_TARGET 'B'
+#define CAM_SNAP 'C'
+
+//Sets bus controller timeout to specified time (in microseconds)
+#define TIMEOUT 1000
 
 #ifndef BYTE_ORDER
 #define BIG_ENDIAN 4321
@@ -173,7 +188,9 @@ typedef struct
 client_cb control_block; //global variable for client control block structure
 
 /* MACROs to split a data word character into its 2 corresponding
-  fields in data_word_s and recombine them  */
+  fields in data_word_s and recombine them. This function is needed
+  since we must assign bits in the word in relation to byte
+  boundaries for it to work correctly.  */
 #define SPLIT_CHAR(in_char, out_char_upper5, out_char_lower3) \
 {                                                             \
     out_char_upper5 = ((int)in_char>>3) & 0x1F;               \
@@ -186,8 +203,7 @@ client_cb control_block; //global variable for client control block structure
 
 /* Represents the RTs memory and is used to send data to the BC.
    This could be edited in future to create a more realistic
-   representation of RT memory
- */
+   representation of RT memory */
 char rt_memory_2d[64][2] = { {'A','A'},
                              {'A','B'},
                              {'A','C'},
@@ -253,6 +269,9 @@ char rt_memory_2d[64][2] = { {'A','A'},
                              {'C','L'},                            
                              {'C','M'} };
 
+int num_pending_words; //variable to allow bus controller to wait for all requested data
+
+int waiting_sc_command = 0; //variable to wait for spacecraft command
 
 /* ==================== MODE CODES (FOR REFERENCE) ========================
 
@@ -301,13 +320,14 @@ typedef enum
 
 void analyze_command_word(command_word_s * command_word);
 void decode_data_word(data_word_s * data_word);
-void build_bc_data_word(char message_byte1, char message_byte2);
+void build_bc_data_word(char message_byte1, char message_byte2); 
 void build_command_word(int rt_address, char tr_bit, int subaddress, int word_count);
 void analyze_status_word(status_word_s * status_word);
 void interpret_incoming_frame_bc(generic_word_s * generic_word);
 void interpret_incoming_frame_rt(generic_word_s * generic_word);
-void send_data(generic_word_s *data);
+void send_data(generic_word_s *data); 
 void analyze_mode_code(command_word_s * command_word);
+void interpret_sc_command(data_word_s * data_word);
 
 
 // A hacky way to print command word bits :)
@@ -415,6 +435,9 @@ void print_void(void * void_ptr)
    found in the repository 
    ====================================================================== */
 
+
+
+
 /* This function sends a command word for the RT to receive data and 
    then breaks the message into segments to be sent to the RT as 
    data words */
@@ -440,11 +463,11 @@ void send_data_to_rt(int rt_address, int subaddress, char message[])
     {
         if(character_number + 1 > message_length)
         {
-            build_bc_data_word(message[character_number], ' ');
+            build_bc_data_word(message[character_number], ' '); 
         }
         else
         {
-            build_bc_data_word(message[character_number], message[character_number+1]);          
+            build_bc_data_word(message[character_number], message[character_number+1]); 
         }
         character_number += 2;
 
@@ -457,6 +480,19 @@ void send_data_to_rt(int rt_address, int subaddress, char message[])
 void request_data_from_rt(int rt_address, int subaddress, int word_count)
 {
     build_command_word(rt_address, 'T', subaddress, word_count);
+    num_pending_words = word_count; //set the incrementer so it can wait until all requested data is received
+    while (num_pending_words > 0)
+    {
+        //TODO implement timeout
+        usleep(1);
+    }
+}
+
+void send_sc_command(int rt_address, char command)
+{
+    build_command_word(rt_address, 'R', 0, 1);
+    char sc_command_indicator = '/';
+    build_bc_data_word(sc_command_indicator, command);
 }
 
 /* This fuction builds command words according the 1553 spec */
@@ -512,8 +548,9 @@ void build_bc_data_word(char message_byte1, char message_byte2)
 
     SPLIT_CHAR(message_byte2, data_word.character_B1, data_word.character_B2);
     data_word.parity_bit = 1;
-    //print_data_word(&data_word);
-    send_data((generic_word_s*)&data_word);
+    data_word.padding = 0;
+    print_data_word(&data_word);
+    send_data((generic_word_s*)&data_word); 
 }
 
 /* =======================================================================
@@ -527,7 +564,7 @@ void build_rt_data_word(int subaddress, int data_word_count)
     int data_words_sent = 0;
 
     /* input validation */
-    if(subaddress > SUB_ADDR_MAX)
+    if(subaddress > SUB_ADDR_MAX) //TODO Sub-address should start anywhere but not buffer overflow
     {
         printf("Invalid subaddress (build_rt_data_word)");
         return;
@@ -584,6 +621,9 @@ void interpret_incoming_frame_rt(generic_word_s * generic_word)
     }
     else if(generic_word->sync_bits == SYNC_BITS_DATA)
     {
+        printf("data word received\n"); //testing
+        print_void(generic_word);
+        print_data_word(generic_word);
         decode_data_word((data_word_s *)generic_word);
     }
     else
@@ -605,6 +645,7 @@ void interpret_incoming_frame_bc(generic_word_s * generic_word)
     }
     else if(generic_word->sync_bits == SYNC_BITS_DATA)
     {
+        num_pending_words -= 1;
         decode_data_word((data_word_s *)generic_word);
     }
     else
@@ -623,7 +664,7 @@ void analyze_command_word(command_word_s * command_word)
         print_word(command_word);
         if(command_word->tr_bit == 0)
         {
-            if (command_word->subaddress == 0 || command_word->subaddress == 31)
+            if (command_word->subaddress == 0 || command_word->subaddress == 31) 
             {
                 build_status_word();
                 analyze_mode_code(command_word);
@@ -631,7 +672,7 @@ void analyze_command_word(command_word_s * command_word)
         }
         else if(command_word->tr_bit == 1)
         {
-            if (command_word->subaddress == 0 || command_word->subaddress == 31)
+            if (command_word->subaddress == 0 || command_word->subaddress == 31) //TODO
             {
                 build_status_word();
                 analyze_mode_code(command_word);
@@ -639,7 +680,7 @@ void analyze_command_word(command_word_s * command_word)
             else
             {
                 build_status_word();
-                build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2));
+                build_rt_data_word(command_word->subaddress, ((command_word->word_count1<<3) | command_word->word_count2)); //TODO
             }
         
         }
@@ -650,54 +691,61 @@ void analyze_command_word(command_word_s * command_word)
 
 void analyze_mode_code(command_word_s * command_word)
 {
-    mode_code_e mode_code = (command_word->word_count1<<3) | (command_word->word_count2); //TODO
-    switch(mode_code)
+    if (command_word->subaddress == 0)
     {
-        case DYNAMIC_BUS_CONTROL:
-            printf("Initializing mode code: dynamic bus control\n");
-            break;
-        case SYNCHRONIZE:
-            printf("Initializing mode code: synchronize\n");
-            break;
-        case TRANSMIT_STATUS_WORD:
-            printf("Initializing mode code: synchronize\n");
-            break;
-        case INTIATE_SELF_TEST:
-            printf("Initializing mode code: self test\n");
-            break;
-        case TRANSMITTER_SHUTDOWN:
-            printf("Initializing mode code: transmitter shutdown\n");
-            break;
-        case OVERRIDE_TRANSMITTER_SHUTDOWN:
-            printf("Initializing mode code: override transmitter shutdown\n");
-            break;
-        case INHIBIT_TERMINAL_FLAG:
-            printf("Initializing mode code: INHIBIT_TERMINAL_FLAG\n");
-            break;
-        case OVERRIDE_INHIBIT_TERMINAL_FLAG:
-            printf("Initializing mode code: OVERRIDE_INHIBIT_TERMINAL_FLAG\n");
-            break;
-        case RESET_REMOTE_TERMINAL:
-            printf("Initializing mode code: RESET_REMOTE_TERMINAL\n");
-            break;
-        case TRANSMIT_VECTOR_WORD:
-            printf("Initializing mode code: TRANSMIT_VECTOR_WORD\n");
-            break;
-        case SYNCHRONIZE_DATA:
-            printf("Initializing mode code: SYNCHRONIZE_DATA\n");
-            break;
-        case TRANSMIT_LAST_COMMAND_WORD:
-            printf("Initializing mode code: TRANSMIT_LAST_COMMAND_WORD\n");
-            break;
-        case TRANSMIT_BIT_WORD:
-            printf("Initializing mode code: TRANSMIT_BIT_WORD\n");
-            break;
-        case SELECTED_TRANSMITTER_SHUTDOWN:
-            printf("Initializing mode code: SELECTED_TRANSMITTER_SHUTDOWN\n");
-            break;
-        case OVERRIDE_SELECTED_TRANSMITTER_SHUTDOWN:
-            printf("Initializing mode code: OVERRIDE_TRANSMITTER_SHUTDOWN\n");
-            break;
+        waiting_sc_command = 1;
+    }
+    else
+    {
+        mode_code_e mode_code = (command_word->word_count1<<3) | (command_word->word_count2); //TODO
+        switch(mode_code)
+        {
+            case DYNAMIC_BUS_CONTROL:
+                printf("Initializing mode code: dynamic bus control\n");
+                break;
+            case SYNCHRONIZE:
+                printf("Initializing mode code: synchronize\n");
+                break;
+            case TRANSMIT_STATUS_WORD:
+                printf("Initializing mode code: synchronize\n");
+                break;
+            case INTIATE_SELF_TEST:
+                printf("Initializing mode code: self test\n");
+                break;
+            case TRANSMITTER_SHUTDOWN:
+                printf("Initializing mode code: transmitter shutdown\n");
+                break;
+            case OVERRIDE_TRANSMITTER_SHUTDOWN:
+                printf("Initializing mode code: override transmitter shutdown\n");
+                break;
+            case INHIBIT_TERMINAL_FLAG:
+                printf("Initializing mode code: INHIBIT_TERMINAL_FLAG\n");
+                break;
+            case OVERRIDE_INHIBIT_TERMINAL_FLAG:
+                printf("Initializing mode code: OVERRIDE_INHIBIT_TERMINAL_FLAG\n");
+                break;
+            case RESET_REMOTE_TERMINAL:
+                printf("Initializing mode code: RESET_REMOTE_TERMINAL\n");
+                break;
+            case TRANSMIT_VECTOR_WORD:
+                printf("Initializing mode code: TRANSMIT_VECTOR_WORD\n");
+                break;
+            case SYNCHRONIZE_DATA:
+                printf("Initializing mode code: SYNCHRONIZE_DATA\n");
+                break;
+            case TRANSMIT_LAST_COMMAND_WORD:
+                printf("Initializing mode code: TRANSMIT_LAST_COMMAND_WORD\n");
+                break;
+            case TRANSMIT_BIT_WORD:
+                printf("Initializing mode code: TRANSMIT_BIT_WORD\n");
+                break;
+            case SELECTED_TRANSMITTER_SHUTDOWN:
+                printf("Initializing mode code: SELECTED_TRANSMITTER_SHUTDOWN\n");
+                break;
+            case OVERRIDE_SELECTED_TRANSMITTER_SHUTDOWN:
+                printf("Initializing mode code: OVERRIDE_TRANSMITTER_SHUTDOWN\n");
+                break;
+        }
 
     }
 }
@@ -705,11 +753,30 @@ void analyze_mode_code(command_word_s * command_word)
 /* Prints data words received */
 void decode_data_word(data_word_s * data_word)
 {
-    
-    printf("%c%c\n", 
-        COMBINE_CHAR(data_word->character_A1, data_word->character_A2), 
-        COMBINE_CHAR(data_word->character_B1, data_word->character_B2));
+    printf("decoding data word\n"); //testing
+    if((COMBINE_CHAR(data_word->character_A1, data_word->character_A2)) == '/')
+    {
+        interpret_sc_command(data_word);
+    }
+    else
+    {
+        printf("%c%c\n", 
+            COMBINE_CHAR(data_word->character_A1, data_word->character_A2), 
+            COMBINE_CHAR(data_word->character_B1, data_word->character_B2));
+    }
+}
 
+void interpret_sc_command(data_word_s * data_word)
+{
+    printf("interpreting sc command\n"); //testing
+    if((COMBINE_CHAR(data_word->character_B1, data_word->character_B2)) == 'A') //testing
+    {
+        printf("Pointing spacecraft at ground station\n");
+    }
+    else if((COMBINE_CHAR(data_word->character_B1, data_word->character_B2)) == 'B')
+    {
+        printf("Pointing spacecraft at target\n");
+    }
 }
 
 /* Prints status words */
@@ -769,7 +836,8 @@ void *initialize_listener()
     {
           
         n = recvfrom(socket_listener, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &address, &len); 
-        buffer[n] = '\0'; 
+        buffer[n] = '\0';
+        printf("packet received\n"); //testing
         if (control_block.user_class == BC_CLASS) //in order to know how to interpret the incoming word, the user class is referenced (which is set during initialization)
         {
             interpret_incoming_frame_bc((generic_word_s*)buffer);
@@ -789,7 +857,7 @@ void *initialize_listener()
 
 
 /* creates a socket to send data */
-void send_data(generic_word_s *data)
+void send_data(generic_word_s *data) 
 {
     int socket_sender; 
     char buffer[BUFFER_SIZE];
@@ -812,14 +880,13 @@ void send_data(generic_word_s *data)
 
     memset(&address, 0, sizeof(address)); 
       
-    address.sin_family = AF_INET; 
+    address.sin_family = AF_INET;  
     address.sin_port = htons(control_block.destination_port); 
     address.sin_addr.s_addr = inet_addr(IP_ADDR); 
 
     int n, len;
 
     sendto(socket_sender, (const void *)data, sizeof(generic_word_s), 0, (const struct sockaddr *) &address, sizeof(address));
-    sleep(1);
     
 }
 
@@ -839,3 +906,25 @@ void initialize_library(int source_port, int destination_port, int rt_address, i
     listener = pthread_create(&thread1, NULL, initialize_listener, NULL);
 
 }
+
+
+
+
+/*
+
+Command List:
+
+point_sc_at_groundstation
+point_sc_at_world
+
+TODO:
+
+add PCAP parser
+create Wireshark parser
+get commands working
+make mode codes rare
+orbits? (LEO ~99 min/orbit)
+status word received int
+
+*/
+
