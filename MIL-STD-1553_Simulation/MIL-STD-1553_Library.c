@@ -549,7 +549,7 @@ void build_bc_data_word(char message_byte1, char message_byte2)
     SPLIT_CHAR(message_byte2, data_word.character_B1, data_word.character_B2);
     data_word.parity_bit = 1;
     data_word.padding = 0;
-    print_data_word(&data_word);
+    //print_data_word(&data_word);
     send_data((generic_word_s*)&data_word); 
 }
 
@@ -621,7 +621,7 @@ void interpret_incoming_frame_rt(generic_word_s * generic_word)
     }
     else if(generic_word->sync_bits == SYNC_BITS_DATA)
     {
-        printf("data word received\n"); //testing
+        //printf("data word received\n"); //testing
         print_void(generic_word);
         print_data_word(generic_word);
         decode_data_word((data_word_s *)generic_word);
@@ -753,7 +753,7 @@ void analyze_mode_code(command_word_s * command_word)
 /* Prints data words received */
 void decode_data_word(data_word_s * data_word)
 {
-    printf("decoding data word\n"); //testing
+    //printf("decoding data word\n"); //testing
     if((COMBINE_CHAR(data_word->character_A1, data_word->character_A2)) == '/')
     {
         interpret_sc_command(data_word);
@@ -837,7 +837,7 @@ void *initialize_listener()
           
         n = recvfrom(socket_listener, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &address, &len); 
         buffer[n] = '\0';
-        printf("packet received\n"); //testing
+        //printf("packet received\n"); //testing
         if (control_block.user_class == BC_CLASS) //in order to know how to interpret the incoming word, the user class is referenced (which is set during initialization)
         {
             interpret_incoming_frame_bc((generic_word_s*)buffer);
