@@ -622,8 +622,8 @@ void interpret_incoming_frame_rt(generic_word_s * generic_word)
     else if(generic_word->sync_bits == SYNC_BITS_DATA)
     {
         //printf("data word received\n"); //testing
-        print_void(generic_word);
-        print_data_word(generic_word);
+        //print_void(generic_word);
+        //print_data_word(generic_word);
         decode_data_word((data_word_s *)generic_word);
     }
     else
