@@ -1,10 +1,13 @@
 #include "MIL-STD-1553_Library.c"
 #include <stdlib.h>
+#include <time.h>
 
 #define SOURCE_PORT 2000
 #define DESTINATION_PORT 2001
 #define RT_ADDRESS 0x00
 #define USER_CLASS BC_CLASS
+
+#define PERCENT_STATION_COMMANDS 5
 
 /* =====================================================
 
@@ -26,30 +29,19 @@
 void generate_data(int rt_address)
 {
     int word_type;
-    word_type = rand() % 3; //chooses randomly whether to send data, request data, or send a mode code
+    word_type = rand() % 2; //chooses randomly whether to send data, request data, or send a mode code
 
     if(word_type == 0)
     {
-        send_data_to_rt(rt_address, 10, "Some Message"); //TODO future: allow for dynamic selection of subaddress and message
+        send_data_to_rt(rt_address, 0, "Some Message"); //TODO future: allow for dynamic selection of subaddress and message
     }
     else if (word_type == 1)
     {
 
         request_data_from_rt(rt_address, RANDOM(1, 30), RANDOM(1, 62));
+
     }
-    else
-    {
-        if (rt_address == 1)
-        {
-            mode_code_e mode_code = (rand() % 8);
-            send_mode_code(rt_address, mode_code);
-        }
-        else if (rt_address == 2)
-        {
-            mode_code_e mode_code = (rand() % 8);
-            send_mode_code(rt_address, mode_code);
-        }
-    }
+
 }
 
 int main()
@@ -58,21 +50,47 @@ int main()
 
     while (1)
     {
-        int action_type; //a variable to decide if the BC sends data to RT1, RT2, or sleeps
-        action_type = (rand() % 3);
+        /* Ground station commands can be sent when the satellite
+           is over the station or at a scheduled time. To simulate 
+           the less predictable nature of these commands, we send a
+           ground station command if a randomly generated number
+           between 1 and 100 is less than/equal to 5 (so that 5% of
+           bus traffic is these commands vs routine checks). This
+           percentage can be modified by changing the Macro 
+           PERCENT_STATION_COMMANDS */
+        
 
-        if(action_type == 0) //This adds some downtime into BC/RT communications
+
+        int send_ground_station_command = RANDOM(1, 100);
+        if (send_ground_station_command <= PERCENT_STATION_COMMANDS)
         {
-            sleep(rand() % 60);
+            generate_data((rand() % 2) + 1); //the rand mod 2 function serves to randomly pick which RT to send command to.
         }
-        else if(action_type == 1) //Sends or requests data from RT1
+        else
         {
-            generate_data(1);
+
+            mode_code_e mode_code1 = RANDOM(0, 8);
+            mode_code_e mode_code2 = RANDOM(10, 15);
+            /* simulates routinely requesting data from flight systems */
+            send_sc_command(THRUSTER, POINT_SC_AT_GROUNDSTATION);
+            request_data_from_rt(THRUSTER, 1, RANDOM(1, 32));
+            //request_data_from_rt(THRUSTER, 10, RANDOM(1, 32));
+            //request_data_from_rt(THRUSTER, 15, RANDOM(1, 32));
+            //request_data_from_rt(MULTIPLEXOR, 1, RANDOM(1, 32));
+            //request_data_from_rt(MULTIPLEXOR, 5, RANDOM(1, 32));
+            //request_data_from_rt(MULTIPLEXOR, 15, RANDOM(1, 32));
+
+            //sleep(120); //After the BC requests data, we simulate dead bus time as calculations are performed
+
+            /* Now based on the received information, the bus controller sends commands */
+            send_data_to_rt(THRUSTER, 0, "Some Message");
+            //send_mode_code(THRUSTER, mode_code1);
+            //send_data_to_rt(MULTIPLEXOR, 0, "Some Message");
+            //send_mode_code(MULTIPLEXOR, mode_code2);
+
+            sleep(120);
         }
-        else //Sends or requests data from RT2
-        {
-            generate_data(2);
-        }
+
  
     }
 
